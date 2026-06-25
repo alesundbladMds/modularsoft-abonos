@@ -983,6 +983,8 @@ async function syncAll(){
     return;
   }
   setSyncStatus('loading','Sincronizando...');
+  // Limpiar localStorage de facturación (fuente de verdad es Sheets)
+  Object.keys(localStorage).filter(k=>k.startsWith('fact_')).forEach(k=>localStorage.removeItem(k));
   try{
     await readClientes();await readFacturacion();await readIPC();await readConfig();
     const now=new Date().toLocaleTimeString('es-AR');
@@ -1733,22 +1735,17 @@ function generarPDFConDatos(data) {
 // ── Facturación ───────────────────────────────────────────────────────────────
 function factKey(mes){return'fact_'+mes;}
 function loadFactMes(mes){
-  if(factData[mes])return factData[mes];
-  try{const raw=localStorage.getItem(factKey(mes));factData[mes]=raw?JSON.parse(raw):{};}catch(e){factData[mes]={};}
+  if(!factData[mes])factData[mes]={};
   return factData[mes];
 }
 function saveFactMes(mes){
-  try{
-    localStorage.setItem(factKey(mes),JSON.stringify(factData[mes]||{}));
-    const el=document.getElementById('fact-guardado');
-    if(el){el.textContent='✓ Guardado';setTimeout(()=>{if(el)el.textContent='';},1500);}
-  }catch(e){}
+  const el=document.getElementById('fact-guardado');
+  if(el){el.textContent='✓ Guardado';setTimeout(()=>{if(el)el.textContent='';},1500);}
   writeAllFacturacion();
 }
 function getFactRow(mes,cod){
   const d=loadFactMes(mes);
-  if(!d[cod]){const c=clientes.find(x=>x.cod==cod);d[cod]={tipo:c?.tipoComprobante||'electronica',facturado:false,cobrado:false,importe:c?.abono||0};}
-  if(!d[cod].importe){const c=clientes.find(x=>x.cod==cod);if(c)d[cod].importe=c.abono;}
+  if(!d[cod]) return {tipo:'electronica',facturado:false,cobrado:false,importe:0};
   return d[cod];
 }
 function setFactRow(mes,cod,field,value){
