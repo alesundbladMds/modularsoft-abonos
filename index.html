@@ -45,6 +45,8 @@ body{font-size:14px;background:#f5f4f0}
 .badge-remito{background:var(--ms-amber-bg)!important;color:var(--ms-amber-tx)!important}
 .client-row{border-left:3px solid transparent;transition:background .1s;cursor:default}
 .client-row:hover td{background:#f0ede8!important}
+.fact-row:hover td,.fact-row-cobrado:hover td,.fact-row-pend:hover td{background:#f0ede8!important}
+.calc-row:hover td{background:#f0ede8!important}
 .client-row.ok{border-left-color:var(--ms-green)}
 .client-row.debe{border-left-color:#C2410C}
 .badge-debe{background:#FFF7ED!important;color:#9A3412!important}
@@ -1451,7 +1453,7 @@ function renderCalcEdicion(mes,aAjustar){
     const entry=calcularMesData.find(x=>x.cod===c.cod);
     const isConf=entry.confirmado;
     const displayNuevo=entry.nuevoFinal||nuevo;
-    html+='<tr id="calc-row-'+c.cod+'" class="'+( isConf?'table-success':'')+'">'+
+    html+='<tr id="calc-row-'+c.cod+'" class="calc-row '+( isConf?'table-success':'')+'">'+
       '<td class="text-center"><input type="checkbox" id="chk-'+c.cod+'" '+(isConf?'checked':'')+' style="width:15px;height:15px;cursor:pointer;accent-color:var(--ms-green)" onchange="toggleConfirmado('+c.cod+')"></td>'+
       '<td style="font-size:11px;color:#aaa;font-family:monospace">'+c.cod+'</td>'+
       '<td style="font-weight:500">'+c.nombre+'<div style="font-size:10px;color:#aaa">'+periodoLabel+'</div></td>'+
@@ -1479,7 +1481,7 @@ function renderHistorialMes(mes,rows){
     '<th>Cód.</th><th>Cliente</th><th>Anterior</th><th>Nuevo</th><th>% aplicado</th><th class="hide-mobile">Fecha</th><th>Acciones</th>'+
     '</tr></thead><tbody>';
   rows.forEach(r=>{
-    html+='<tr>'+
+    html+='<tr class="calc-row">'+
       '<td style="font-size:11px;color:#aaa;font-family:monospace">'+r.cod+'</td>'+
       '<td style="font-weight:500">'+r.cliente+'</td>'+
       '<td>'+fmtPesos(r.importeAnterior)+'</td>'+
@@ -1845,11 +1847,11 @@ function renderFacturacion(){
   tbody.innerHTML='';
   filtered.forEach(c=>{
     const row=getFactRow(mes,c.cod);
-    let trCls='';
-    if(row.cobrado)trCls='fact-row-cobrado';else if(!row.facturado)trCls='fact-row-pend';
+    let trCls='fact-row';
+    if(row.cobrado)trCls+=' fact-row-cobrado';else if(!row.facturado)trCls+=' fact-row-pend';
     const tipoClass=row.tipo==='electronica'?'tipo-e':'tipo-r';
     const tr=document.createElement('tr');
-    if(trCls)tr.className=trCls;
+    tr.className=trCls;
     tr.innerHTML=`<td style="font-size:11px;color:#aaa;font-family:monospace">${c.cod}</td>
       <td style="font-weight:500">${c.nombre}</td>
       <td style="font-weight:500">${fmtPesos(row.importe||c.abono)}</td>
