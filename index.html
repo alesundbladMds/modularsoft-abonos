@@ -817,7 +817,8 @@ function factToRow(mes, cod, row) {
   return [String(mes), String(cod),
     row.tipo || 'electronica',
     row.facturado ? 'TRUE' : 'FALSE',
-    row.cobrado ? 'TRUE' : 'FALSE'
+    row.cobrado ? 'TRUE' : 'FALSE',
+    String(row.importe || 0)
   ];
 }
 
@@ -837,7 +838,7 @@ async function readClientes() {
 }
 
 async function readFacturacion() {
-  const data = await sheetsGet('Facturacion!A2:E');
+  const data = await sheetsGet('Facturacion!A2:F');
   if(!data.values || data.values.length === 0) { factData = {}; return; }
   factData = {};
   data.values.forEach(row => {
@@ -847,7 +848,8 @@ async function readFacturacion() {
     factData[mes][cod] = {
       tipo: row[2] || 'electronica',
       facturado: row[3] === 'TRUE',
-      cobrado: row[4] === 'TRUE'
+      cobrado: row[4] === 'TRUE',
+      importe: row[5] ? Number(row[5]) : 0
     };
   });
 }
@@ -869,7 +871,7 @@ async function writeAllClientes() {
 async function writeAllFacturacion() {
   if(!gAccessToken || !GS_SHEET_ID) return;
   try {
-    await sheetsClear('Facturacion!A2:E');
+    await sheetsClear('Facturacion!A2:F');
     const allRows = [];
     Object.entries(factData).forEach(([mes, byMes]) => {
       Object.entries(byMes).forEach(([cod, row]) => {
@@ -1790,6 +1792,19 @@ function renderFacturacion(){
   const search=(document.getElementById('fact-search')?.value||'').toLowerCase();
   const filtro=document.getElementById('fact-filtro')?.value||'';
   loadFactMes(mes);
+  // Si el mes no fue generado, mostrar grilla vacía con aviso
+  const mesGenerado=factData[mes]&&Object.keys(factData[mes]).length>0;
+  const tbody=document.getElementById('fact-lista');
+  if(!mesGenerado){
+    // Reset stats a cero
+    ['ft-total','ft-cnt-fact','ft-cnt-cobrado','ft-cnt-pend'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='0';});
+    ['ft-importe','ft-facturado','ft-cobrado','ft-pendiente'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='$0';});
+    document.getElementById('ft-pct').textContent='0%';
+    document.getElementById('ft-pct-clientes').textContent='0 de 0';
+    document.getElementById('ft-bar').style.width='0%';
+    tbody.innerHTML='<tr><td colspan="7" class="text-center text-muted py-4" style="font-size:13px">Este mes no fue generado aún. Usá <strong>+ Generar mes</strong> para crear los registros.</td></tr>';
+    return;
+  }
   const activos=clientes.filter(c=>!c.inactivo);
   let totalImporte=0,totalFact=0,totalCobrado=0,cntTotal=0,cntFact=0,cntCobrado=0;
   activos.forEach(c=>{
@@ -1830,7 +1845,7 @@ function renderFacturacion(){
     if(factSortField==='cobrador')return factSortDir*(a.cobrador||'').localeCompare(b.cobrador||'','es');
     return 0;
   });
-  const tbody=document.getElementById('fact-lista');tbody.innerHTML='';
+  tbody.innerHTML='';
   filtered.forEach(c=>{
     const row=getFactRow(mes,c.cod);
     let trCls='';
@@ -1840,7 +1855,7 @@ function renderFacturacion(){
     if(trCls)tr.className=trCls;
     tr.innerHTML=`<td style="font-size:11px;color:#aaa;font-family:monospace">${c.cod}</td>
       <td style="font-weight:500">${c.nombre}</td>
-      <td style="font-weight:500">${fmtPesos(c.abono)}</td>
+      <td style="font-weight:500">${fmtPesos(row.importe||c.abono)}</td>
       <td class="hide-mobile"><select class="tipo-sel ${tipoClass}" onchange="setFactRow('${mes}',${c.cod},'tipo',this.value);this.className='tipo-sel '+(this.value==='electronica'?'tipo-e':'tipo-r')">
         <option value="electronica" ${row.tipo==='electronica'?'selected':''}>📄 Factura e.</option>
         <option value="remito" ${row.tipo==='remito'?'selected':''}>📋 Remito</option>
